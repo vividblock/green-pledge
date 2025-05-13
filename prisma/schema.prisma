@@ -1,0 +1,47 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Pledge {
+  id             String      @id @default(cuid()) // Unique ID for the pledge
+  title          String // Title of the pledge
+  creatorName    String? // Name of the person/org making the pledge (can be anonymous if null, or user-provided)
+  pledgerType    PledgerType // What kind of entity is making the pledge
+  pledgerOrgName String? // If it's an NPO, Startup, Enterprise
+
+  steps                String[] // Simple list of text steps for MVP
+  targetCompletionDate DateTime? @map("target_completion_date")
+
+  isPublic Boolean @default(false) @map("is_public") // Whether to show on public listing
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  @@map("pledges") // Maps to the "pledges" table in PostgreSQL
+}
+
+enum PledgerType {
+  INDIVIDUAL
+  NON_PROFIT
+  STARTUP
+  ENTERPRISE
+}
+
+model User {
+  id        String   @id @default(uuid()) // Supabase Auth user ID is UUID
+  email     String?  @unique
+  pledges   Pledge[]
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}

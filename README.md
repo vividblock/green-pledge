@@ -1,130 +1,205 @@
-# Green Pledge Platform
+# Green Pledge Initiative - MVP
 
-A web application empowering individuals and organizations to create, track, and share carbon reduction pledges. Users can detail the steps they'll take, set timelines, and generate shareable documents/certificates.
+This project is a Minimum Viable Product (MVP) for the Green Pledge Initiative, a platform allowing users to create and share pledges for carbon reduction.
+
+This MVP focuses on the core loop:
+1.  **Create** a pledge.
+2.  **Save** the pledge to a PostgreSQL database.
+3.  **View** public pledges on the homepage.
+4.  **Download** a basic PDF certificate of a pledge.
 
 ## Tech Stack
 
-*   **Backend:** Python, Django, Django Rest Framework (DRF)
-*   **Database:** PostgreSQL (Initially configured for SQLite for development)
-*   **Frontend:** React (with TypeScript)
-*   **Styling:** Tailwind + ShadcnUI
-*   **Build Tool (Frontend):** Vite (or Create React App if you used that)
-*   **API Communication:** Axios
+*   **Frontend & Backend Framework:** [Next.js](https://nextjs.org/) (using App Router)
+*   **ORM:** [Prisma](https://www.prisma.io/)
+*   **Database:** [PostgreSQL](https://www.postgresql.org/) (managed via Docker Compose for local development)
+*   **Styling:** [Tailwind CSS](https://tailwindcss.com/)
+*   **PDF Generation:** [pdf-lib](https://pdf-lib.js.org/)
+*   **Language:** [TypeScript](https://www.typescriptlang.org/)
 
-## Project Structure
+## Project Structure (Key MVP Files)
 
-The project is organized into two main directories:
+```
+.
+├── app/                        # Next.js App Router
+│   ├── page.tsx                # Homepage (lists public pledges)
+│   ├── create-pledge/
+│   │   ├── page.tsx            # Page to host the create pledge form
+│   │   ├── CreatePledgeForm.tsx # Client component for the form
+│   │   └── actions.ts          # Server Action to handle form submission
+│   └── pledges/
+│       └── [id]/
+│           └── download/
+│               └── route.ts    # Route Handler for PDF generation & download
+├── lib/
+│   └── prisma.ts               # Prisma client instantiation
+├── prisma/
+│   ├── schema.prisma           # Prisma schema definition
+│   └── migrations/             # (Will be created when you use `prisma migrate dev`)
+├── public/                     # Static assets
+├── .env                        # Environment variables (DATABASE_URL) - DO NOT COMMIT SENSITIVE DATA
+├── .env.example                # Example environment variables
+├── docker-compose.yml          # Docker Compose for PostgreSQL
+├── next.config.js
+├── package.json
+└── tsconfig.json
+```
 
-*   `backend/`: Contains the Django API project.
-*   `frontend/`: Contains the React frontend application.
+## Getting Started
 
-## Prerequisites
+### Prerequisites
 
-Before you begin, ensure you have the following installed:
+*   [Node.js](https://nodejs.org/) (v18.x or later recommended)
+*   [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
+*   [Docker](https://www.docker.com/get-started) and [Docker Compose](https://docs.docker.com/compose/install/)
 
-*   Python (3.8+ recommended)
-*   Node.js (LTS version recommended) & npm (or yarn)
-*   Git
-*   PostgreSQL Server (Optional for initial development, required for production/advanced features)
+### 1. Clone the Repository
 
-## Setup & Installation
+```bash
+git clone <your-repository-url>
+cd green-pledge-app
+```
 
-1.  **Clone the repository:**
-    ```bash
-    git clone URL
-    cd green-pledge-platform
-    ```
+### 2. Install Dependencies
 
-2.  **Backend Setup:**
-    ```bash
-    cd backend
+```bash
+npm install
+# or
+# yarn install
+```
 
-    # Create and activate a virtual environment
-    python -m venv .venv
-    # On Windows: .\venv\Scripts\activate
-    # On macOS/Linux: source .venv/bin/activate
+### 3. Set Up Environment Variables
 
-    # Install Python dependencies
-    pip install -r requirements.txt
+Create a `.env` file in the root of the project by copying `.env.example` (if you create one) or manually.
+It should contain your database connection string:
 
-    # Create a .env file for environment variables (copy from a .env.example if provided)
-    # Example .env contents:
-    # SECRET_KEY='your-django-secret-key' # Generate a strong key!
-    # DEBUG=True
-    # DATABASE_URL='sqlite:///db.sqlite3' # Initial setup
-    # # DATABASE_URL='postgres://user:password@host:port/dbname' # For PostgreSQL
-    # CORS_ALLOWED_ORIGINS='http://localhost:5173,http://127.0.0.1:5173' # Adjust port if needed (Vite default: 5173, CRA default: 3000)
+```env
+# .env
+DATABASE_URL="postgresql://user:password@localhost:5432/greenpledgedb?schema=public"
+```
 
-    # Apply database migrations
-    python manage.py migrate
+*   `user`: The PostgreSQL username (e.g., `postgres` if using the `docker-compose.yml` below)
+*   `password`: The PostgreSQL password (e.g., `mysecretpassword` if using the `docker-compose.yml` below)
+*   `localhost:5432`: The host and port where PostgreSQL will be running (from Docker).
+*   `greenpledgedb`: The name of the database.
+*   `?schema=public`: Ensures Prisma uses the default public schema.
 
-    # (Optional) Create a superuser for Django Admin
-    # python manage.py createsuperuser
-    ```
+**Create an `.env.example` for your repository (without sensitive data):**
+```env
+# .env.example
+DATABASE_URL="postgresql://DB_USER:DB_PASSWORD@DB_HOST:DB_PORT/DB_NAME?schema=public"
+```
 
-3.  **Frontend Setup:**
-    ```bash
-    cd ../frontend
+### 4. Start PostgreSQL using Docker Compose
 
-    # Install Node dependencies
-    npm install
-    # or: yarn install
+Create a `docker-compose.yml` file in the root of your project:
 
-    # Create environment variable files (e.g., .env.development)
-    # Example .env.development contents:
-    # VITE_API_BASE_URL=http://127.0.0.1:8000/api # Use /api suffix if your Django API urls are namespaced
-    # (If using Create React App, prefix with REACT_APP_ instead of VITE_)
+```yaml
+# docker-compose.yml
+version: '3.8'
+services:
+  postgres_db:
+    image: postgres:15 # Or your preferred PostgreSQL version
+    container_name: green_pledge_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres # Or your desired username
+      POSTGRES_PASSWORD: mysecretpassword # Or your desired password
+      POSTGRES_DB: greenpledgedb # The database name
+    ports:
+      - "5432:5432" # Maps container port 5432 to host port 5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # Persists data
 
-    ```
+volumes:
+  postgres_data:
+```
 
-## Running the Application
+Then, run:
 
-1.  **Start the Backend Server:**
-    *   Make sure you are in the `backend/` directory with the virtual environment activated.
-    *   Run:
-        ```bash
-        python manage.py runserver
-        ```
-    *   The Django API will typically run on `http://127.0.0.1:8000/`.
+```bash
+docker-compose up -d
+```
 
-2.  **Start the Frontend Development Server:**
-    *   Open a *new terminal* and navigate to the `frontend/` directory.
-    *   Run:
-        ```bash
-        npm run dev
-        # or: yarn dev
-        # (If using Create React App: npm start or yarn start)
-        ```
-    *   The React app will typically run on `http://localhost:5173/` (Vite) or `http://localhost:3000/` (CRA). Open this URL in your browser.
+This will start a PostgreSQL container in the background.
 
-## Environment Variables
+### 5. Apply Database Schema with Prisma
 
-*   **Backend (`backend/.env`):** Contains sensitive keys, database URLs, and CORS settings. **Never commit this file to Git.**
-*   **Frontend (`frontend/.env*`):** Contains configuration like the API base URL. See Vite/CRA documentation for loading rules. **Do not commit sensitive keys here either.** Consider creating `.env.example` files to show required variables.
+Once the database is running, apply your Prisma schema:
 
-## Database
+```bash
+npx prisma migrate dev --name init
+```
+*   This command will create your database if it doesn't exist (based on your `DATABASE_URL`).
+*   It will create a `migrations` folder and apply the schema defined in `prisma/schema.prisma`.
+*   It will also generate the Prisma Client.
 
-*   The project is configured to use SQLite (`db.sqlite3`) by default for easy development setup. This file is included in `.gitignore`.
-*   To switch to PostgreSQL:
-    1.  Install the necessary driver: `pip install psycopg2-binary` (or `psycopg2` if compiling).
-    2.  Update the `DATABASE_URL` in your `backend/.env` file to your PostgreSQL connection string.
-    3.  Ensure your PostgreSQL server is running and the database exists.
-    4.  Run `python manage.py migrate` again.
+*(If you've already used `npx prisma db push` and want to switch to migrations, you might need to baseline your database first. For a fresh start, `migrate dev` is good.)*
 
-## API Endpoints (Example)
+Alternatively, if you are in early development and don't need migration files yet:
+```bash
+npx prisma db push
+```
+Followed by:
+```bash
+npx prisma generate
+```
 
-The following are examples of API endpoints provided by the backend:
+### 6. Run the Development Server
 
-*   `/api/auth/register/`: User registration
-*   `/api/auth/login/`: User login (token authentication)
-*   `/api/auth/user/`: Get current user details
-*   `/api/pledges/`: List user's pledges (GET), Create a new pledge (POST)
-*   `/api/pledges/<id>/`: Retrieve (GET), Update (PUT/PATCH), Delete (DELETE) a specific pledge
-*   `/api/pledges/<id>/document/`: Generate pledge document PDF (GET)
-*   `/api/pledges/<id>/certificate/`: Generate pledge certificate PDF (GET)
-*   `/api/public/pledges/<id>/`: View a public pledge (GET)
+```bash
+npm run dev
+# or
+# yarn dev
+```
 
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the application.
 
-## License
+## How the Project Runs (MVP Workflow)
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+1.  **Homepage (`app/page.tsx`):**
+    *   This is a Next.js Server Component.
+    *   It directly queries the PostgreSQL database using `prisma.pledge.findMany(...)` to fetch pledges where `isPublic` is true.
+    *   It displays information about the project and lists these public pledges.
+    *   Contains a link to `/create-pledge`.
+
+2.  **Create Pledge Page (`app/create-pledge/...`):**
+    *   **`page.tsx`:** Hosts the `CreatePledgeForm` client component.
+    *   **`CreatePledgeForm.tsx`:**
+        *   A client component (`'use client'`) that renders the HTML form.
+        *   Uses `useFormState` and `useFormStatus` for handling form submission with a Server Action.
+    *   **`actions.ts`:**
+        *   A Server Action (`'use server'`).
+        *   Receives `FormData` from the form.
+        *   Uses `zod` for validation.
+        *   If valid, uses `prisma.pledge.create(...)` to save the new pledge to the database.
+        *   Calls `revalidatePath('/')` to ensure the homepage shows the new pledge if it's public.
+        *   Returns a message/status to the client form.
+
+3.  **Download Pledge PDF (`app/pledges/[id]/download/route.ts`):**
+    *   This is a Next.js Route Handler (an API endpoint).
+    *   It's accessed via a URL like `/pledges/some-pledge-id/download`.
+    *   It receives the `pledgeId` from the URL parameters.
+    *   Uses `prisma.pledge.findUnique(...)` to fetch the specific pledge data.
+    *   Uses the `pdf-lib` library to dynamically generate a PDF document in memory.
+    *   Sends the PDF back to the browser with `Content-Type: application/pdf` and `Content-Disposition: attachment` headers, prompting a download.
+
+## Database Management with Prisma
+
+*   **Schema Definition:** `prisma/schema.prisma` is the single source of truth for your database schema.
+*   **Migrations:**
+    *   `npx prisma migrate dev --name <migration_name>`: Creates a new SQL migration file and applies it. (Recommended for changes after initial setup).
+*   **Prisma Client:**
+    *   `npx prisma generate`: Run this after any changes to `schema.prisma` to update the typed Prisma Client used for database queries.
+*   **Prisma Studio (Optional):**
+    *   `npx prisma studio`: Opens a web UI to view and manage your database data.
+
+## Next Steps (Post-MVP Considerations)
+
+*   User Authentication (e.g., with NextAuth.js or by integrating Supabase Auth if you reconsider).
+*   User dashboards to view/manage their own pledges.
+*   Editing pledges.
+*   More sophisticated pledge update tracking.
+*   Advanced PDF certificate styling.
+*   Robust error handling and UI/UX improvements.
+*   Unit and integration tests.
