@@ -23,6 +23,10 @@
 # misc
 .DS_Store
 *.pem
+
+# database & ORM
+/database
+./database
 src/generated/*
 /docs
 
